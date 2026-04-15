@@ -1,0 +1,952 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>NS-SHAFT 風格小遊戲</title>
+  <style>
+    :root {
+      --bg: #1a1a24;
+      --panel: #26263a;
+      --panel-2: #33334a;
+      --text: #f7f3d7;
+      --accent: #ffd166;
+      --danger: #ff5d73;
+      --heal: #58d68d;
+      --speed: #70c1ff;
+      --slow: #b388ff;
+      --border: #0f0f17;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      background:
+        radial-gradient(circle at top, #3a355a 0%, #1b1a29 45%, #0f1018 100%);
+      font-family: "Courier New", monospace;
+      color: var(--text);
+    }
+
+    .wrap {
+      width: min(92vw, 720px);
+      display: grid;
+      gap: 14px;
+      justify-items: center;
+    }
+
+    .title {
+      font-size: 22px;
+      letter-spacing: 1px;
+      text-shadow: 2px 2px 0 #000;
+      color: var(--accent);
+    }
+
+    .hud {
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      padding: 10px 14px;
+      background: rgba(38, 38, 58, 0.95);
+      border: 3px solid var(--border);
+      box-shadow: 0 6px 0 #111;
+    }
+
+    .stats {
+      display: flex;
+      gap: 18px;
+      flex-wrap: wrap;
+      font-size: 15px;
+    }
+
+    .controls {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    button {
+      border: 3px solid var(--border);
+      background: var(--accent);
+      color: #231f20;
+      font-family: inherit;
+      font-size: 15px;
+      font-weight: bold;
+      padding: 8px 14px;
+      cursor: pointer;
+      box-shadow: 0 4px 0 #946d14;
+      transition: transform 0.05s ease;
+    }
+
+    button:active {
+      transform: translateY(2px);
+      box-shadow: 0 2px 0 #946d14;
+    }
+
+    .game-shell {
+      position: relative;
+      border: 4px solid var(--border);
+      box-shadow: 0 10px 0 #111;
+      background: #12131b;
+    }
+
+    canvas {
+      display: block;
+      background:
+        linear-gradient(to bottom, #27304a 0%, #1a2032 40%, #111621 100%);
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+    }
+
+    .legend {
+      width: 100%;
+      padding: 10px 14px;
+      background: rgba(38, 38, 58, 0.95);
+      border: 3px solid var(--border);
+      box-shadow: 0 6px 0 #111;
+      font-size: 13px;
+      line-height: 1.7;
+    }
+
+    .legend span {
+      font-weight: bold;
+    }
+
+    .normal { color: #e8d7a8; }
+    .spike { color: var(--danger); }
+    .heal { color: var(--heal); }
+    .speed { color: var(--speed); }
+    .slow { color: var(--slow); }
+
+    .game-shell {
+      width: min(100%, 420px);
+    }
+
+    canvas {
+      width: 100%;
+      height: auto;
+      touch-action: none;
+    }
+
+    .touch-controls {
+      width: 100%;
+      display: none;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .touch-hint {
+      display: none;
+      width: 100%;
+      text-align: center;
+      font-size: 12px;
+      opacity: 0.85;
+    }
+
+    .touch-btn {
+      appearance: none;
+      -webkit-appearance: none;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-touch-callout: none;
+      border: 3px solid var(--border);
+      background: var(--panel-2);
+      color: var(--text);
+      font-family: inherit;
+      font-size: 24px;
+      font-weight: bold;
+      padding: 14px 0;
+      box-shadow: 0 4px 0 #111;
+      text-align: center;
+      touch-action: manipulation;
+    }
+
+    .touch-btn:active,
+    .touch-btn.active {
+      transform: translateY(2px);
+      box-shadow: 0 2px 0 #111;
+      background: var(--accent);
+      color: #231f20;
+    }
+
+    @media (max-width: 768px) {
+      body {
+        padding: max(10px, env(safe-area-inset-top)) 10px max(10px, env(safe-area-inset-bottom)) 10px;
+        min-height: 100dvh;
+        align-content: start;
+      }
+
+      .wrap {
+        width: 100%;
+        max-width: 460px;
+        gap: 10px;
+      }
+
+      .title {
+        font-size: 18px;
+        text-align: center;
+      }
+
+      .hud,
+      .legend {
+        padding: 10px;
+      }
+
+      .stats {
+        gap: 12px;
+        font-size: 14px;
+      }
+
+      .controls {
+        width: 100%;
+      }
+
+      .controls button {
+        width: 100%;
+      }
+
+      .game-shell {
+        width: 100%;
+      }
+
+      .touch-controls,
+      .touch-hint {
+        display: grid;
+      }
+
+      .legend {
+        font-size: 12px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="title">NS-SHAFT 風格小遊戲</div>
+
+    <div class="hud">
+      <div class="stats">
+        <div>分數: <span id="score">0</span></div>
+        <div>生命值: <span id="hp">100</span></div>
+        <div>狀態: <span id="status">未開始</span></div>
+      </div>
+      <div class="controls">
+        <button id="startBtn">開始 / 重新開始</button>
+      </div>
+    </div>
+
+    <div class="game-shell">
+      <canvas id="game" width="420" height="640"></canvas>
+    </div>
+
+    <div class="touch-hint">手機玩法：按住畫面左半邊向左，右半邊向右</div>
+
+    <div class="touch-controls" aria-label="手機控制">
+      <button class="touch-btn" id="leftBtn" type="button">◀ 左</button>
+      <button class="touch-btn" id="rightBtn" type="button">右 ▶</button>
+    </div>
+
+    <div class="legend">
+      <div><span class="normal">普通平台</span>：安全落腳</div>
+      <div><span class="spike">尖刺平台</span>：持續扣血</div>
+      <div><span class="heal">補血平台</span>：持續回血</div>
+      <div><span class="speed">加速平台</span>：暫時令平台上移更快</div>
+      <div><span class="slow">減速平台</span>：暫時令平台上移更慢</div>
+      <div>操作：桌面用 ← →，手機用下方觸控鍵</div>
+    </div>
+  </div>
+
+  <script>
+    // =========================================================
+    // NS-SHAFT 風格小遊戲
+    // 單一 HTML 檔案版本
+    // 方便之後擴充音效、開始畫面、排行榜、角色皮膚等
+    // =========================================================
+
+    // =========================================================
+    // A. 可調難度參數
+    // 之後你可以優先改呢區去控制遊戲難度
+    // =========================================================
+    const CONFIG = {
+      canvasWidth: 420,
+      canvasHeight: 640,
+      gravity: 0.32,
+      moveSpeed: 3.2,
+      jumpBounce: -8.8, // 跳高啲，容易接到下一層
+      baseScrollSpeed: 0.78,
+      scrollSpeedRampPerSecond: 0.018,
+      maxScrollSpeedMultiplier: 1.9,
+      maxPlatforms: 11,
+      platformGapY: 52, // 減少間距，避免踩唔到
+      platformMinWidth: 72,
+      platformMaxWidth: 128,
+      platformHeight: 12,
+      spikeDamagePerSecond: 26,
+      healPerSecond: 18,
+      speedEffectMultiplier: 1.65,
+      slowEffectMultiplier: 0.65,
+      effectDurationMs: 2200,
+      scoreRate: 12,
+      maxHP: 100,
+      spawnTypeWeights: {
+        normal: 0.54,
+        spike: 0.18,
+        heal: 0.14,
+        speedUp: 0.07,
+        slowDown: 0.07,
+      },
+    };
+
+    const canvas = document.getElementById('game');
+    const ctx = canvas.getContext('2d');
+
+    const scoreEl = document.getElementById('score');
+    const hpEl = document.getElementById('hp');
+    const statusEl = document.getElementById('status');
+    const startBtn = document.getElementById('startBtn');
+    const leftBtn = document.getElementById('leftBtn');
+    const rightBtn = document.getElementById('rightBtn');
+    const isTouchDevice = window.matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window;
+
+    canvas.width = CONFIG.canvasWidth;
+    canvas.height = CONFIG.canvasHeight;
+
+    // =========================================================
+    // 工具函式
+    // =========================================================
+    const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
+    const rand = (min, max) => Math.random() * (max - min) + min;
+    const randInt = (min, max) => Math.floor(rand(min, max + 1));
+
+    function choosePlatformType() {
+      const r = Math.random();
+      let acc = 0;
+      for (const [type, weight] of Object.entries(CONFIG.spawnTypeWeights)) {
+        acc += weight;
+        if (r <= acc) return type;
+      }
+      return 'normal';
+    }
+
+    // =========================================================
+    // 遊戲狀態
+    // =========================================================
+    const game = {
+      running: false,
+      gameOver: false,
+      score: 0,
+      elapsed: 0,
+      lastTime: 0,
+      globalSpeedMultiplier: 1,
+      speedEffectTimer: 0,
+      nextPlatformLevel: 0,
+      platforms: [],
+      keys: {
+        left: false,
+        right: false,
+      },
+      player: null,
+    };
+
+    // =========================================================
+    // 角色資料
+    // =========================================================
+    function createPlayer() {
+      return {
+        x: canvas.width / 2 - 12,
+        y: 300,
+        prevY: 300,
+        w: 24,
+        h: 30,
+        vx: 0,
+        vy: 0,
+        hp: CONFIG.maxHP,
+        onPlatform: false,
+        currentPlatformType: null,
+        lastLandedLevel: -1,
+      };
+    }
+
+    // =========================================================
+    // C. 平台生成邏輯
+    // 之後想改平台數量、闊度、類型比例、由邊個方向補平台，可以主要睇呢區
+    // =========================================================
+    function createPlatform(x, y, width, type = 'normal', level = null) {
+      return {
+        x,
+        y,
+        w: width,
+        h: CONFIG.platformHeight,
+        type,
+        level: level ?? game.nextPlatformLevel++,
+      };
+    }
+
+    function generateInitialPlatforms() {
+      game.platforms = [];
+      game.nextPlatformLevel = 0;
+      const initialPlatforms = [];
+
+      // 起始保底平台，放近角色下面，避免一開局真空
+      initialPlatforms.push(createPlatform(canvas.width / 2 - 55, 350, 110, 'normal', 0));
+
+      let currentY = 420;
+      while (currentY < canvas.height + 80) {
+        const width = randInt(CONFIG.platformMinWidth, CONFIG.platformMaxWidth);
+        const x = randInt(12, canvas.width - width - 12);
+        const type = currentY > canvas.height ? 'normal' : choosePlatformType();
+        initialPlatforms.push(createPlatform(x, currentY, width, type, 0));
+        currentY += CONFIG.platformGapY;
+      }
+
+      // 再向上補一批平台，令整個場景由一開始已經連續
+      currentY = 298;
+      while (currentY > -40) {
+        const width = randInt(CONFIG.platformMinWidth, CONFIG.platformMaxWidth);
+        const x = randInt(12, canvas.width - width - 12);
+        const type = choosePlatformType();
+        initialPlatforms.push(createPlatform(x, currentY, width, type, 0));
+        currentY -= CONFIG.platformGapY;
+      }
+
+      // 依照畫面由上到下排序，再賦予樓層編號
+      initialPlatforms.sort((a, b) => a.y - b.y);
+      initialPlatforms.forEach((platform, index) => {
+        platform.level = index;
+      });
+
+      game.nextPlatformLevel = initialPlatforms.length;
+      game.platforms = initialPlatforms;
+    }
+
+    function spawnPlatformAtBottom() {
+      const width = randInt(CONFIG.platformMinWidth, CONFIG.platformMaxWidth);
+      const x = randInt(12, canvas.width - width - 12);
+      const bottomMostY = Math.max(...game.platforms.map(p => p.y));
+      const y = bottomMostY + CONFIG.platformGapY;
+      const type = bottomMostY > canvas.height + 40 ? 'normal' : choosePlatformType();
+      game.platforms.push(createPlatform(x, y, width, type));
+    }
+
+    function updatePlatforms(dt) {
+      const timeMultiplier = Math.min(
+        CONFIG.maxScrollSpeedMultiplier,
+        1 + game.elapsed * CONFIG.scrollSpeedRampPerSecond
+      );
+      const scrollSpeed = CONFIG.baseScrollSpeed * timeMultiplier * game.globalSpeedMultiplier;
+
+      for (const p of game.platforms) {
+        p.y -= scrollSpeed * dt * 60;
+      }
+
+      // 刪除移出畫面頂部的平台，再由畫面底部補回新平台
+      game.platforms = game.platforms.filter(p => p.y + p.h > -20);
+      while (game.platforms.length < CONFIG.maxPlatforms) {
+        spawnPlatformAtBottom();
+      }
+    }
+
+    // =========================================================
+    // B. 角色控制
+    // 之後想改移動手感、速度、重力，主要睇呢區
+    // =========================================================
+    function handleInput() {
+      game.player.vx = 0;
+
+      if (game.keys.left) {
+        game.player.vx = -CONFIG.moveSpeed;
+      }
+      if (game.keys.right) {
+        game.player.vx = CONFIG.moveSpeed;
+      }
+    }
+
+    function updatePlayer(dt) {
+      const p = game.player;
+      p.onPlatform = false;
+      p.currentPlatformType = null;
+
+      handleInput();
+
+      // 記錄上一幀位置（用來防止向上撞到平台）
+      p.prevY = p.y;
+
+      p.vy += CONFIG.gravity * dt * 60;
+      p.x += p.vx * dt * 60;
+      p.y += p.vy * dt * 60;
+
+      // 左右邊界限制
+      p.x = clamp(p.x, 0, canvas.width - p.w);
+
+      let foundPlatform = false;
+
+      // 與平台碰撞
+      for (const plat of game.platforms) {
+        // 只允許「由上向下」踩平台，避免跳返上面
+        const wasAbovePlatform = p.prevY + p.h <= plat.y;
+        const isFalling = p.vy > 0;
+        const overlapX = p.x + p.w > plat.x && p.x < plat.x + plat.w;
+        const overlapY = p.y + p.h >= plat.y && p.y + p.h <= plat.y + plat.h + 10;
+        // 可以重複踩同一層，但唔可以返去更高層
+        const isAllowedLevel = plat.level >= p.lastLandedLevel;
+        if (isFalling && wasAbovePlatform && overlapX && overlapY && isAllowedLevel) {
+          p.y = plat.y - p.h;
+          p.vy = CONFIG.jumpBounce;
+          p.onPlatform = true;
+          p.currentPlatformType = plat.type;
+          // 只當去到更低層先更新樓層記錄
+          if (plat.level > p.lastLandedLevel) {
+            p.lastLandedLevel = plat.level;
+          }
+          foundPlatform = true;
+          break;
+        }
+      }
+
+            applyPlatformEffect(dt);
+    }
+
+    function applyPlatformEffect(dt) {
+      const p = game.player;
+      if (!p.onPlatform || !p.currentPlatformType) return;
+
+      const amountScale = dt;
+
+      switch (p.currentPlatformType) {
+        case 'spike':
+          p.hp -= CONFIG.spikeDamagePerSecond * amountScale;
+          break;
+        case 'heal':
+          p.hp += CONFIG.healPerSecond * amountScale;
+          break;
+        case 'speedUp':
+          game.globalSpeedMultiplier = CONFIG.speedEffectMultiplier;
+          game.speedEffectTimer = CONFIG.effectDurationMs;
+          break;
+        case 'slowDown':
+          game.globalSpeedMultiplier = CONFIG.slowEffectMultiplier;
+          game.speedEffectTimer = CONFIG.effectDurationMs;
+          break;
+      }
+
+      p.hp = clamp(p.hp, 0, CONFIG.maxHP);
+    }
+
+    function updateEffects(deltaMs) {
+      if (game.speedEffectTimer > 0) {
+        game.speedEffectTimer -= deltaMs;
+        if (game.speedEffectTimer <= 0) {
+          game.speedEffectTimer = 0;
+          game.globalSpeedMultiplier = 1;
+        }
+      }
+    }
+
+    // =========================================================
+    // Game over 條件
+    // =========================================================
+    function checkGameOver() {
+      const p = game.player;
+
+      if (p.hp <= 0) {
+        endGame('生命值歸零');
+        return;
+      }
+
+      if (p.y > canvas.height) {
+        endGame('跌出畫面底部');
+        return;
+      }
+
+      if (p.y + p.h < 0) {
+        endGame('被畫面頂部夾死');
+      }
+    }
+
+    function endGame(reason) {
+      game.running = false;
+      game.gameOver = true;
+      game.keys.left = false;
+      game.keys.right = false;
+      releaseAllTouchKeys();
+      statusEl.textContent = `Game Over - ${reason}`;
+    }
+
+    // =========================================================
+    // 分數、UI
+    // =========================================================
+    function updateScore(dt) {
+      game.score += CONFIG.scoreRate * dt * game.globalSpeedMultiplier;
+    }
+
+    function updateUI() {
+      scoreEl.textContent = Math.floor(game.score);
+      hpEl.textContent = Math.round(game.player.hp);
+
+      if (game.running) {
+        if (game.speedEffectTimer > 0) {
+          const state = game.globalSpeedMultiplier > 1 ? '加速中' : '減速中';
+          statusEl.textContent = state;
+        } else {
+          statusEl.textContent = '進行中';
+        }
+      }
+    }
+
+    // =========================================================
+    // 繪圖
+    // =========================================================
+    function drawBackground() {
+      // 復古格仔線條
+      ctx.save();
+      ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+      ctx.lineWidth = 1;
+
+      for (let y = 0; y < canvas.height; y += 32) {
+        ctx.beginPath();
+        ctx.moveTo(0, y + 0.5);
+        ctx.lineTo(canvas.width, y + 0.5);
+        ctx.stroke();
+      }
+
+      for (let x = 0; x < canvas.width; x += 32) {
+        ctx.beginPath();
+        ctx.moveTo(x + 0.5, 0);
+        ctx.lineTo(x + 0.5, canvas.height);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    function drawPlatform(p) {
+      switch (p.type) {
+        case 'normal':
+          ctx.fillStyle = '#d8c690';
+          break;
+        case 'spike':
+          ctx.fillStyle = '#c84663';
+          break;
+        case 'heal':
+          ctx.fillStyle = '#41b97f';
+          break;
+        case 'speedUp':
+          ctx.fillStyle = '#4d9fe6';
+          break;
+        case 'slowDown':
+          ctx.fillStyle = '#8b63d9';
+          break;
+      }
+
+      ctx.fillRect(p.x, p.y, p.w, p.h);
+      ctx.fillStyle = 'rgba(0,0,0,0.25)';
+      ctx.fillRect(p.x, p.y + p.h - 3, p.w, 3);
+
+      // 平台特效紋理
+      if (p.type === 'spike') {
+        ctx.fillStyle = '#ffd4dc';
+        for (let i = 0; i < p.w; i += 10) {
+          ctx.beginPath();
+          ctx.moveTo(p.x + i, p.y);
+          ctx.lineTo(p.x + i + 5, p.y - 7);
+          ctx.lineTo(p.x + i + 10, p.y);
+          ctx.fill();
+        }
+      }
+
+      if (p.type === 'heal') {
+        ctx.fillStyle = '#d9ffe7';
+        ctx.fillRect(p.x + p.w / 2 - 2, p.y - 5, 4, 10);
+        ctx.fillRect(p.x + p.w / 2 - 6, p.y - 1, 12, 4);
+      }
+
+      if (p.type === 'speedUp') {
+        ctx.fillStyle = '#d8efff';
+        ctx.fillRect(p.x + 8, p.y + 2, 18, 3);
+        ctx.beginPath();
+        ctx.moveTo(p.x + 26, p.y + 1);
+        ctx.lineTo(p.x + 34, p.y + 6);
+        ctx.lineTo(p.x + 26, p.y + 11);
+        ctx.fill();
+      }
+
+      if (p.type === 'slowDown') {
+        ctx.fillStyle = '#efe5ff';
+        ctx.fillRect(p.x + 8, p.y + 4, 22, 3);
+        ctx.fillRect(p.x + 8, p.y + 8, 14, 3);
+      }
+    }
+
+    function drawPlayer(p) {
+      // 像素風小朋友
+      const x = Math.round(p.x);
+      const y = Math.round(p.y);
+
+      // 頭
+      ctx.fillStyle = '#ffd7b3';
+      ctx.fillRect(x + 6, y, 12, 10);
+
+      // 頭髮
+      ctx.fillStyle = '#4a2f1b';
+      ctx.fillRect(x + 5, y, 14, 4);
+      ctx.fillRect(x + 4, y + 2, 3, 4);
+      ctx.fillRect(x + 17, y + 2, 3, 4);
+
+      // 眼
+      ctx.fillStyle = '#1a1a1a';
+      ctx.fillRect(x + 8, y + 4, 2, 2);
+      ctx.fillRect(x + 14, y + 4, 2, 2);
+
+      // 身體
+      ctx.fillStyle = '#ffcc4d';
+      ctx.fillRect(x + 6, y + 10, 12, 10);
+
+      // 手
+      ctx.fillStyle = '#ffd7b3';
+      ctx.fillRect(x + 3, y + 11, 3, 8);
+      ctx.fillRect(x + 18, y + 11, 3, 8);
+
+      // 腳
+      ctx.fillStyle = '#4fc3f7';
+      ctx.fillRect(x + 7, y + 20, 4, 8);
+      ctx.fillRect(x + 13, y + 20, 4, 8);
+
+      // 鞋
+      ctx.fillStyle = '#222';
+      ctx.fillRect(x + 6, y + 28, 5, 2);
+      ctx.fillRect(x + 13, y + 28, 5, 2);
+    }
+
+    function drawHPBar() {
+      const x = 12;
+      const y = 12;
+      const w = 120;
+      const h = 12;
+      const ratio = game.player.hp / CONFIG.maxHP;
+
+      ctx.fillStyle = 'rgba(0,0,0,0.45)';
+      ctx.fillRect(x, y, w, h);
+
+      ctx.fillStyle = ratio > 0.5 ? '#52d681' : ratio > 0.25 ? '#ffd166' : '#ff5d73';
+      ctx.fillRect(x, y, w * ratio, h);
+
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(x, y, w, h);
+    }
+
+    function drawOverlay() {
+      if (game.running) return;
+
+      ctx.save();
+      ctx.fillStyle = 'rgba(0,0,0,0.48)';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      ctx.fillStyle = '#f7f3d7';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+
+      ctx.font = 'bold 26px Courier New';
+      ctx.fillText(game.gameOver ? 'GAME OVER' : 'READY?', canvas.width / 2, canvas.height / 2 - 24);
+
+      ctx.font = '16px Courier New';
+      ctx.fillText('按開始 / 重新開始', canvas.width / 2, canvas.height / 2 + 16);
+      ctx.restore();
+    }
+
+    function render() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      drawBackground();
+
+      for (const p of game.platforms) {
+        drawPlatform(p);
+      }
+
+      drawPlayer(game.player);
+      drawHPBar();
+      drawOverlay();
+    }
+
+    // =========================================================
+    // 主循環
+    // =========================================================
+    function update(deltaMs) {
+      const dt = deltaMs / 1000;
+      game.elapsed += dt;
+      updateEffects(deltaMs);
+      updatePlatforms(dt);
+      updatePlayer(dt);
+      updateScore(dt);
+      checkGameOver();
+      updateUI();
+    }
+
+    function gameLoop(timestamp) {
+      if (!game.lastTime) game.lastTime = timestamp;
+      const deltaMs = Math.min(32, timestamp - game.lastTime);
+      game.lastTime = timestamp;
+
+      if (game.running) {
+        update(deltaMs);
+      }
+
+      render();
+      requestAnimationFrame(gameLoop);
+    }
+
+    // =========================================================
+    // 初始化 / 重開
+    // =========================================================
+    function resetGame() {
+      game.running = true;
+      game.gameOver = false;
+      game.score = 0;
+      game.elapsed = 0;
+      game.lastTime = 0;
+      game.globalSpeedMultiplier = 1;
+      game.speedEffectTimer = 0;
+      game.keys.left = false;
+      game.keys.right = false;
+      releaseAllTouchKeys();
+      game.player = createPlayer();
+      generateInitialPlatforms();
+      updateUI();
+      statusEl.textContent = '進行中';
+    }
+
+    // =========================================================
+    // 鍵盤事件
+    // =========================================================
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowLeft') {
+        game.keys.left = true;
+        e.preventDefault();
+      }
+      if (e.key === 'ArrowRight') {
+        game.keys.right = true;
+        e.preventDefault();
+      }
+    });
+
+    window.addEventListener('keyup', (e) => {
+      if (e.key === 'ArrowLeft') {
+        game.keys.left = false;
+        e.preventDefault();
+      }
+      if (e.key === 'ArrowRight') {
+        game.keys.right = false;
+        e.preventDefault();
+      }
+    });
+
+    startBtn.addEventListener('click', resetGame);
+
+    function setTouchKey(direction, isPressed) {
+      game.keys[direction] = isPressed;
+      const btn = direction === 'left' ? leftBtn : rightBtn;
+      btn.classList.toggle('active', isPressed);
+    }
+
+    function releaseAllTouchKeys() {
+      setTouchKey('left', false);
+      setTouchKey('right', false);
+    }
+
+    function bindTouchControl(button, direction) {
+      const press = (e) => {
+        e.preventDefault();
+        releaseAllTouchKeys();
+        setTouchKey(direction, true);
+      };
+
+      const release = (e) => {
+        if (e) e.preventDefault();
+        setTouchKey(direction, false);
+      };
+
+      button.addEventListener('touchstart', press, { passive: false });
+      button.addEventListener('touchend', release, { passive: false });
+      button.addEventListener('touchcancel', release, { passive: false });
+      button.addEventListener('pointerdown', press);
+      button.addEventListener('pointerup', release);
+      button.addEventListener('pointercancel', release);
+      button.addEventListener('mousedown', press);
+      button.addEventListener('mouseup', release);
+      button.addEventListener('mouseleave', release);
+    }
+
+    bindTouchControl(leftBtn, 'left');
+    bindTouchControl(rightBtn, 'right');
+
+    function handleCanvasTouch(e) {
+      if (!isTouchDevice) return;
+      e.preventDefault();
+
+      const rect = canvas.getBoundingClientRect();
+      const touch = e.touches[0];
+      if (!touch) {
+        releaseAllTouchKeys();
+        return;
+      }
+
+      const touchX = touch.clientX - rect.left;
+      const moveLeft = touchX < rect.width / 2;
+      setTouchKey('left', moveLeft);
+      setTouchKey('right', !moveLeft);
+    }
+
+    function handleCanvasPointer(e) {
+      if (!isTouchDevice) return;
+      e.preventDefault();
+
+      const rect = canvas.getBoundingClientRect();
+      const pointerX = e.clientX - rect.left;
+      const moveLeft = pointerX < rect.width / 2;
+      setTouchKey('left', moveLeft);
+      setTouchKey('right', !moveLeft);
+    }
+
+    canvas.addEventListener('touchstart', handleCanvasTouch, { passive: false });
+    canvas.addEventListener('touchmove', handleCanvasTouch, { passive: false });
+    canvas.addEventListener('touchend', releaseAllTouchKeys, { passive: false });
+    canvas.addEventListener('touchcancel', releaseAllTouchKeys, { passive: false });
+    canvas.addEventListener('pointerdown', handleCanvasPointer);
+    canvas.addEventListener('pointermove', (e) => {
+      if (e.buttons) handleCanvasPointer(e);
+    });
+    canvas.addEventListener('pointerup', releaseAllTouchKeys);
+    canvas.addEventListener('pointercancel', releaseAllTouchKeys);
+
+    window.addEventListener('touchend', releaseAllTouchKeys, { passive: false });
+    window.addEventListener('pointerup', releaseAllTouchKeys);
+    window.addEventListener('pagehide', releaseAllTouchKeys);
+    window.addEventListener('blur', releaseAllTouchKeys);
+
+    // 初始畫面
+    game.player = createPlayer();
+    generateInitialPlatforms();
+    game.running = true; // 一開始就可以控制角色
+    updateUI();
+    render();
+    requestAnimationFrame(gameLoop);
+
+    // =========================================================
+    // 預留擴充位置
+    // 之後可以加入：
+    // 1. 音效系統 AudioManager
+    // 2. 開始畫面 / 暫停畫面 SceneManager
+    // 3. 排行榜儲存 localStorage
+    // 4. 不同角色皮膚與動畫
+    // 5. 更多平台效果，例如會碎裂、左右移動、彈簧平台
+    // =========================================================
+  </script>
+</body>
+</html>
